@@ -64,3 +64,6 @@ void printState(stateType *statePtr)
 	}
     printf("end state\n");
 }
+
+//ไม่มี string
+//ไม่มี boolean
