@@ -7,6 +7,7 @@
 
 using namespace std;
 map<string, string> operationType;
+// opcode check
 map<string, string> opcode;
 map<string, int> addressOfLabel;
 
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
     // }
 
     vector<string> line = readAllLines(argv[1]);
-    freopen(argv[2], "w", stdout);
+    // freopen(argv[2], "w", stdout);
     vector<string> binaryResult;
     initParser();
     for (int i = 0; i < line.size(); i++)
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
         // check whitespace to see if it has label or not
         stream = line[i];
         // cout << line[i] << endl;
-        if (stream[i] != ' ' && stream[i] != '\0' && stream[i] != '\t')
+        if (stream[0] != ' ' && stream[0] != '\0' && stream[0] != '\t')
         { // label found since it is not white space in the start
             string labelName = tokenize();
             addressOfLabel[labelName] = i; // save label name to map
@@ -90,20 +91,23 @@ int main(int argc, char *argv[])
         string binary = "0000000";
         string regA, regB, regDes, offset;
         string valRegA, valRegB, valRegDes, ValOffest;
+        bool isFill = 0;
         binary += opcode[operation];
         // cout << operation << endl;
         if (operationType[operation] == "R")
         { // 3 fields
+            // R
             regA = tokenize();
             regB = tokenize();
             regDes = tokenize();
             valRegA = numberToBinary(convertToNumber(regA));
             valRegB = numberToBinary(convertToNumber(regB));
-            regDes = numberToBinary(convertToNumber(regDes));
-            binary += valRegA + valRegB + "0000000000000" + regDes;
+            valRegDes = numberToBinary(convertToNumber(regDes));
+            binary += valRegA + valRegB + "0000000000000" + valRegDes;
         }
         else if (operationType[operation] == "I")
         { // 3 fields
+            // I check
             regA = tokenize();
             regB = tokenize();
             offset = tokenize();
@@ -114,8 +118,9 @@ int main(int argc, char *argv[])
                 // cout << convertToNumber(offset) - i -1 << '\n';
                 ValOffest = numberToBinaryI(convertToNumber(offset) - i - 1);
             }
-            else
+            else{
                 ValOffest = numberToBinaryI(convertToNumber(offset));
+            }
             binary += valRegA + valRegB + ValOffest;
         }
         else if (operationType[operation] == "J")
@@ -138,14 +143,17 @@ int main(int argc, char *argv[])
             string value = tokenize();
             // cout << convertToNumber(value)<< " "<< binaryStringToDem(numberToBinary32(convertToNumber(value))) << endl;
             binaryResult.push_back(numberToBinary32(convertToNumber(value)));
-            continue;
+            isFill = 1;
         }
         else
         {
             // cout <<"code: " << line[i] << "|| operation: " << operation << endl;
             throw runtime_error("Unexpected operation"+ operation + "at line " + to_string(i));
         }
-        binaryResult.push_back(binary);
+        // cout << "Debugging: " << operation << ' ' << regA << ' ' << regB << ' ' << offset << '\n';
+        // cout << "Num: " << valRegA << ' ' << valRegB << ' ' << ValOffest << '\n';
+        // cout << "Dec: " << binaryStringToDem(valRegA) << ' ' << binaryStringToDem(valRegB) << ' ' <<binaryStringToDem( ValOffest) << '\n';
+        if(!isFill) binaryResult.push_back(binary);
     }
 
     for (int i = 0; i < binaryResult.size(); i++)
@@ -228,8 +236,9 @@ string tokenize()
 
 int convertToNumber(string s)
 {
-    if (isNumber(s))
+    if (isNumber(s)){
         return stoi(s);
+    }
     else
     {
         return addressOfLabel[s];
@@ -277,7 +286,7 @@ void initParser()
     operationType["halt"] = "O";
 
     opcode["add"] = "000";
-    opcode["nadd"] = "001";
+    opcode["nand"] = "001";
     opcode["lw"] = "010";
     opcode["sw"] = "011";
     opcode["beq"] = "100";

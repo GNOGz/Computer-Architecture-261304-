@@ -9,7 +9,7 @@ gcd	lw 0 6 one
 	nand 4 6 4 
 	nand 4 4 4
 	beq  0 4 check 
-swap 	lw 0 6 one 
+swap lw 0 6 one 
 	sw 5 1 stack 
 	add 5 6 5
 	sw 5 2 stack 
@@ -17,7 +17,7 @@ swap 	lw 0 6 one
 	lw 0 6 neg1
 	add 5 6 5
 	lw 5 2 stack 
-check	beq 0 2 end
+check beq 0 2 end
 	lw 0 6 one
 	lw 0 4 all1
 	nand 4 2 4
