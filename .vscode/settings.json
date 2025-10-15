@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "*.embeddedhtml": "html",
-        "string.h": "c",
-        "ostream": "cpp",
-        "stdexcept": "cpp"
-    }
-}

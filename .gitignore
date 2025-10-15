@@ -1,0 +1,4 @@
+*.exe
+.vimrc
+.vscode
+*.mc
