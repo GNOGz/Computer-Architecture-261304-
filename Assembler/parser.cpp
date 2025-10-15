@@ -203,12 +203,12 @@ string tokenize()
     int i = 0;
     while (i < stream.size())
     {
-        while (stream[i] == ' ')
+        while (stream[i] == ' ' || stream[i] == '\t')
         {
             i++;
         }
 
-        while (stream[i] != ' ' && stream[i] != '\0')
+        while (stream[i] != ' ' && stream[i] != '\0' && stream[i] != '\t')
         {
             // cout << int(stream[i]) << " " ;
             tokenToReturn += stream[i];
