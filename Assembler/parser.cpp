@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
     //     exit(1);
     // }
 
-    vector<string> line = readAllLines("1.txt");
-    freopen("output.txt", "w", stdout);
+    vector<string> line = readAllLines(argv[1]);
+    freopen(argv[2], "w", stdout);
     vector<string> binaryResult;
     initParser();
     for (int i = 0; i < line.size(); i++)
