@@ -32,18 +32,17 @@ string numberToBinaryI(int);
 string numberToBinary32(int);
 int binaryStringToDem(string);
 
-
 int main(int argc, char *argv[])
 {
-    if (argc != 3)
-    {
-        printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
-               argv[0]);
-        exit(1);
-    }
+    // if (argc != 3)
+    // {
+    //     printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
+    //            argv[0]);
+    //     exit(1);
+    // }
 
-    vector<string> line = readAllLines(argv[1]);
-    freopen(argv[2],"w",stdout);
+    vector<string> line = readAllLines("1.txt");
+    freopen("output.txt", "w", stdout);
     vector<string> binaryResult;
     initParser();
     for (int i = 0; i < line.size(); i++)
@@ -83,7 +82,7 @@ int main(int argc, char *argv[])
     { // second loop is for creating opcode
         stream = line[i];
         // cout << line[i] << endl;
-        if (stream[i] != ' ' && stream[i] != '\0' && stream[i] != '\t')
+        if (stream[0] != ' ' && stream[0] != '\0' && stream[0] != '\t')
         {               // label found since it is not white space in the start
             tokenize(); // tokenize right away to get rid of label
         }
@@ -113,9 +112,10 @@ int main(int argc, char *argv[])
             if (operation == "beq" && !isNumber(offset))
             {
                 // cout << convertToNumber(offset) - i -1 << '\n';
-                ValOffest = numberToBinaryI(convertToNumber(offset) - i -1);
+                ValOffest = numberToBinaryI(convertToNumber(offset) - i - 1);
             }
-            else ValOffest = numberToBinaryI(convertToNumber(offset));
+            else
+                ValOffest = numberToBinaryI(convertToNumber(offset));
             binary += valRegA + valRegB + ValOffest;
         }
         else if (operationType[operation] == "J")
@@ -142,7 +142,8 @@ int main(int argc, char *argv[])
         }
         else
         {
-            throw runtime_error("Unexpected operation at line " + to_string(i));
+            // cout <<"code: " << line[i] << "|| operation: " << operation << endl;
+            throw runtime_error("Unexpected operation"+ operation + "at line " + to_string(i));
         }
         binaryResult.push_back(binary);
     }
@@ -151,7 +152,7 @@ int main(int argc, char *argv[])
     {
         // cout<<"addresss " << i <<" " <<binaryResult[i]  << "|| size : " << binaryResult[i].size() << endl;
         // cout <<"address " << i << ": " << binaryStringToDem(binaryResult[i])<< " || "<<line[i] << endl;
-        cout <<  binaryStringToDem(binaryResult[i]) << endl;
+        cout << binaryStringToDem(binaryResult[i]) << endl;
     }
 }
 
@@ -182,13 +183,15 @@ bool isNumber(string str)
 
     int start = 0;
 
-    if (str[0] == '-') {
-        if (str.size() == 1)  
+    if (str[0] == '-')
+    {
+        if (str.size() == 1)
             return false;
-        start = 1;  
+        start = 1;
     }
 
-    for (int i = start; i < str.size(); ++i) {
+    for (int i = start; i < str.size(); ++i)
+    {
         if (!std::isdigit(str[i]))
             return false;
     }
