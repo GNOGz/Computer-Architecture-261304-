@@ -33,16 +33,17 @@ string numberToBinary32(int);
 int binaryStringToDem(string);
 
 
-int main()
+int main(int argc, char *argv[])
 {
-    // if (argc != 3)
-    // {
-    //     printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
-    //            argv[0]);
-    //     exit(1);
-    // }
+    if (argc != 3)
+    {
+        printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
+               argv[0]);
+        exit(1);
+    }
 
-    vector<string> line = readAllLines("./1.txt");
+    vector<string> line = readAllLines(argv[1]);
+    freopen(argv[2],"w",stdout);
     vector<string> binaryResult;
     initParser();
     for (int i = 0; i < line.size(); i++)
