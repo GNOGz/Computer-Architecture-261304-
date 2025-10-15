@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
         // check whitespace to see if it has label or not
         stream = line[i];
         // cout << line[i] << endl;
-        if (line[i][0] != ' ')
+        if (stream[i] == ' ' || stream[i] != '\0' || stream[i] == '\t')
         { // label found since it is not white space in the start
             string labelName = tokenize();
             addressOfLabel[labelName] = i; // save label name to map
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
     { // second loop is for creating opcode
         stream = line[i];
         // cout << line[i] << endl;
-        if (stream[0] != ' ')
+        if (stream[i] == ' ' || stream[i] != '\0' || stream[i] == '\t')
         {               // label found since it is not white space in the start
             tokenize(); // tokenize right away to get rid of label
         }
@@ -203,7 +203,7 @@ string tokenize()
     int i = 0;
     while (i < stream.size())
     {
-        while (stream[i] == ' ' || stream[i] == '\t')
+        while (stream[i] != ' ' && stream[i] != '\0' && stream[i] != '\t')
         {
             i++;
         }
