@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
             regB = tokenize();
             valRegA = numberToBinary(convertToNumber(regA));
             valRegB = numberToBinary(convertToNumber(regB));
-            binary += valRegA + regB + "0000000000000000";
+            binary += valRegA + valRegB + "0000000000000000";
         }
         else if (operationType[operation] == "O")
         { // no field
