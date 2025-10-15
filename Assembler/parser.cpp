@@ -203,7 +203,7 @@ string tokenize()
     int i = 0;
     while (i < stream.size())
     {
-        while (stream[i] != ' ' && stream[i] != '\0' && stream[i] != '\t')
+        while (stream[i] == ' ' || stream[i] == '\0' || stream[i] == '\t')
         {
             i++;
         }
