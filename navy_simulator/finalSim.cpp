@@ -153,8 +153,6 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 printState(&cpu);
                 fprintState(outFile, &cpu);
 
-                cout << "\nRegister 1 holds: " << cpu.reg[1] << "\n";
-                outFile << "\nRegister 1 holds: " << cpu.reg[1] << "\n";
                 return;
 
             case 7: // noop
