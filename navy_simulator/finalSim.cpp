@@ -23,13 +23,13 @@ struct Instruction {
     int destOrOffset;
 };
 
-int signExtend16(int num);
 void printState(stateType *);
 void fprintState(ofstream &out, stateType *statePtr);
+int signExtend16(int num);
 void loadProgram(const string &filename, stateType &state, ofstream &outFile);
+Instruction decodeInstruction(int machineCode);
 void initializeMachine(stateType &state);
 void executeProgram(stateType &cpu, ofstream &outFile);
-Instruction decodeInstruction(int machineCode);
 
 int main(int argc, char *argv[]) {
     if (argc < 2 || argc > 3) {
