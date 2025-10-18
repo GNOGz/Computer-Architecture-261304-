@@ -16,6 +16,43 @@ typedef struct stateStruct {
     int numMemory;
 } stateType;
 
+struct Instruction {
+    int opcode;
+    int regA;
+    int regB;
+    int destOrOffset;
+};
+
+void printState(stateType *);
+void fprintState(ofstream &out, stateType *statePtr);
+int signExtend16(int num);
+void loadProgram(const string &filename, stateType &state, ofstream &outFile);
+void initializeMachine(stateType &state);
+void executeProgram(stateType &cpu, ofstream &outFile);
+
+int main(int argc, char *argv[]) {
+    if (argc < 2 || argc > 3) {
+        cerr << "Usage: " << argv[0] << " <machine-code file> [output file]\n";
+        return 1;
+    }
+
+    string inputFile = argv[1];
+    string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
+
+    ofstream out(outputFile);
+    if (!out.is_open()) {
+        cerr << "Error: cannot open output file " << outputFile << endl;
+        return 1;
+    }
+
+    stateType machine{};
+    initializeMachine(machine);
+    loadProgram(inputFile, machine, out);
+    executeProgram(machine, out);
+    out.close();
+    return 0;
+}
+
 void printState(stateType *statePtr) {
     cout << "\n@@@\nstate:\n";
     cout << "\tpc " << statePtr->pc << "\n";
@@ -53,13 +90,6 @@ int signExtend16(int num) {
     return num;
 }
 
-struct Instruction {
-    int opcode;
-    int regA;
-    int regB;
-    int destOrOffset;
-};
-
 Instruction decodeInstruction(int machineCode) {
     Instruction inst{};
     inst.opcode = (machineCode >> 22) & 0x7;
@@ -78,7 +108,7 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
 
     string line;
     int index = 0;
-    
+
     while (getline(file, line)) {
         //check line length
         if (line.length() > MAXLINELENGTH) {
@@ -180,27 +210,4 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
         cpu.pc++;
         instructionCount++;
     }
-}
-
-int main(int argc, char *argv[]) {
-    if (argc < 2 || argc > 3) {
-        cerr << "Usage: " << argv[0] << " <machine-code file> [output file]\n";
-        return 1;
-    }
-
-    string inputFile = argv[1];
-    string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
-
-    ofstream out(outputFile);
-    if (!out.is_open()) {
-        cerr << "Error: cannot open output file " << outputFile << endl;
-        return 1;
-    }
-
-    stateType machine{};
-    initializeMachine(machine);
-    loadProgram(inputFile, machine, out);
-    executeProgram(machine, out);
-    out.close();
-    return 0;
 }
