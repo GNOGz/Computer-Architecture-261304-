@@ -11,11 +11,9 @@ map<string, int> addressOfLabel;
 string stream; // global variable to store each operation in each line
 
 bool isNumber(string);
-long long binaryToDecimal(vector<string>);
 void initParser();
 vector<string> readAllLines(string);
 string tokenize();
-vector<string> numTokenize(string, int);
 int convertToNumber(string);
 string numberToBinary(int);
 string numberToBinaryI(int);
