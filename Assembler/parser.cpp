@@ -1,49 +1,37 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <cstdlib>
 #include <bits/stdc++.h>
+#include <string>
 
 using namespace std;
+
+// map to store opcode,address of label and operationType
 map<string, string> operationType;
-// opcode check
 map<string, string> opcode;
 map<string, int> addressOfLabel;
 
 string stream; // global variable to store each operation in each line
 
-// R-type instructions (add, nand) มี 3 fields (field0 คือ regA, field1 คือ regB, field2 คือ destReg)
-// I-type instructions (lw, sw, beq) มี 3 fields (field0 คือ regA, field1 คือ regB, field2 เป็น ค่าตัวเลขสำหรับ offsetField ซึ่งเป็นได้ทั้ง บวกหรือลบ หรือ symbolic address ซึ่งจะกล่าวถึงข้างล่าง
-// J-type instructions (jalr) มี 2 fields (field0 คือ regA, field1 คือ regB)
-// O-type instruction (noop, halt) ไม่มี field
-
-// int readAndParse(FILE *, string, string, string, string, string);
-
 bool isNumber(string);
-
-long long binaryToDecimal(vector<string>);
 void initParser();
 vector<string> readAllLines(string);
 string tokenize();
-vector<string> numTokenize(string, int);
 int convertToNumber(string);
 string numberToBinary(int);
 string numberToBinaryI(int);
 string numberToBinary32(int);
 int binaryStringToDem(string);
+bool validateLabel(string);
 
 int main(int argc, char *argv[])
 {
-    // if (argc != 3)
-    // {
-    //     printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
-    //            argv[0]);
-    //     exit(1);
-    // }
+    if (argc != 3)
+    {
+        printf("error: usage: %s <assembly-code-file> <machine-code-file>\n",
+               argv[0]);
+        exit(1);
+    }
 
     vector<string> line = readAllLines(argv[1]);
-    // freopen(argv[2], "w", stdout);
+    freopen(argv[2], "w", stdout);
     vector<string> binaryResult;
     initParser();
     for (int i = 0; i < line.size(); i++)
@@ -54,24 +42,9 @@ int main(int argc, char *argv[])
         if (stream[0] != ' ' && stream[0] != '\0' && stream[0] != '\t')
         { // label found since it is not white space in the start
             string labelName = tokenize();
-            addressOfLabel[labelName] = i; // save label name to map
+            if (validateLabel(labelName))
+                addressOfLabel[labelName] = i; // save label name to map
             continue;
-        }
-        string labelName = tokenize();
-        string check = tokenize();
-        if (check == ".fill")
-        {
-            string addressValue = tokenize();
-            int val;
-            if (isNumber(addressValue))
-            {
-                val = stol(addressValue);
-            } // if .fill and then immediate, we can save the value right away. :)
-            else
-            {
-                val = addressOfLabel[addressValue];
-            } // if it's the label. we need to look up the value in the map.
-            addressOfLabel[labelName] = val; // save the value to map.
         }
     }
 
@@ -118,7 +91,8 @@ int main(int argc, char *argv[])
                 // cout << convertToNumber(offset) - i -1 << '\n';
                 ValOffest = numberToBinaryI(convertToNumber(offset) - i - 1);
             }
-            else{
+            else
+            {
                 ValOffest = numberToBinaryI(convertToNumber(offset));
             }
             binary += valRegA + valRegB + ValOffest;
@@ -147,13 +121,14 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // cout <<"code: " << line[i] << "|| operation: " << operation << endl;
-            throw runtime_error("Unexpected operation"+ operation + "at line " + to_string(i));
+            cerr << "Unexpected operation: " + operation + "\nat line " + to_string(i);
+            exit(1);
         }
         // cout << "Debugging: " << operation << ' ' << regA << ' ' << regB << ' ' << offset << '\n';
         // cout << "Num: " << valRegA << ' ' << valRegB << ' ' << ValOffest << '\n';
         // cout << "Dec: " << binaryStringToDem(valRegA) << ' ' << binaryStringToDem(valRegB) << ' ' <<binaryStringToDem( ValOffest) << '\n';
-        if(!isFill) binaryResult.push_back(binary);
+        if (!isFill)
+            binaryResult.push_back(binary);
     }
 
     for (int i = 0; i < binaryResult.size(); i++)
@@ -162,6 +137,7 @@ int main(int argc, char *argv[])
         // cout <<"address " << i << ": " << binaryStringToDem(binaryResult[i])<< " || "<<line[i] << endl;
         cout << binaryStringToDem(binaryResult[i]) << endl;
     }
+    exit(0);
 }
 
 vector<string> readAllLines(string path)
@@ -169,7 +145,8 @@ vector<string> readAllLines(string path)
     ifstream file(path); // open your file
     if (!file.is_open())
     {
-        throw runtime_error("file can not  open file");
+        cerr << "can not open file";
+        exit(1);
     }
 
     vector<string> lines;
@@ -236,12 +213,19 @@ string tokenize()
 
 int convertToNumber(string s)
 {
-    if (isNumber(s)){
+    if (isNumber(s))
+    {
         return stoi(s);
     }
     else
     {
-        return addressOfLabel[s];
+        if (addressOfLabel.find(s) != addressOfLabel.end())
+            return addressOfLabel[s];
+        else
+        {
+            cerr << "Label name is not defined: " + s;
+            exit(1);
+        }
     }
 }
 
@@ -253,6 +237,11 @@ string numberToBinary(int num)
 
 string numberToBinaryI(int num)
 {
+    if (num < -32768 || num > 32767)
+    {
+        cerr << "offset argument overflow: " + to_string(num);
+        exit(1);
+    }
     bitset<16> binary(num);
     return binary.to_string();
 }
@@ -274,6 +263,22 @@ int binaryStringToDem(string a)
     }
     return res;
 }
+
+bool validateLabel(string label)
+{
+    if (label.size() > 6)
+    {
+        cerr << "Label name must not exceed 6 characters: " + label ;
+        exit(1);
+    }
+    if (addressOfLabel.find(label) != addressOfLabel.end())
+    {
+        cerr << "duplicated label name found: " + label;
+        exit(1);
+    }
+    return true;
+}
+
 void initParser()
 {
     operationType["add"] = "R";
