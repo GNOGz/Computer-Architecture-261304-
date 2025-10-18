@@ -5,17 +5,16 @@
 
 using namespace std;
 
-#define NUMMEMORY 65536
-#define NUMREGS 8
+#define NUMMEMORY 65536 /* maximum number of words in memory */
+#define NUMREGS 8       /* number of machine registers */
+#define MAXLINELENGTH 1000
 
-struct stateStruct {
+typedef struct stateStruct {
     int pc;
     int mem[NUMMEMORY];
     int reg[NUMREGS];
     int numMemory;
-};
-
-typedef stateStruct stateType;
+} stateType;
 
 void printState(stateType *statePtr) {
     cout << "\n@@@\nstate:\n";
@@ -79,7 +78,15 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
 
     string line;
     int index = 0;
+    
     while (getline(file, line)) {
+        //check line length
+        if (line.length() > MAXLINELENGTH) {
+            cerr << "Error: line " << index 
+                 << " exceeds MAXLINELENGTH of " << MAXLINELENGTH << endl;
+            exit(1);
+        }
+
         stringstream ss(line);
         int value;
         if (!(ss >> value)) {
@@ -99,8 +106,15 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
 
 
 void initializeMachine(stateType &state) {
+    // state.pc = 0;
+    // for (int &r : state.reg) r = 0;
     state.pc = 0;
-    for (int &r : state.reg) r = 0;
+    for (int i = 0; i < NUMREGS; ++i)
+        state.reg[i] = 0;
+
+    state.numMemory = 0;
+    for (int i = 0; i < NUMMEMORY; ++i)
+        state.mem[i] = 0;
 }
 
 
@@ -187,7 +201,6 @@ int main(int argc, char *argv[]) {
     initializeMachine(machine);
     loadProgram(inputFile, machine, out);
     executeProgram(machine, out);
-
     out.close();
     return 0;
 }
