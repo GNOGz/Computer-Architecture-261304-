@@ -72,7 +72,7 @@ void printState(stateType *statePtr) {
     cout << "end state\n";
 }
 
-//print state to an output file (for easier debugging )
+//same as printState() but print to an output file (for easier debugging )
 void fprintState(ofstream &out, stateType *statePtr) {
     out << "\n@@@\nstate:\n";
     out << "\tpc " << statePtr->pc << "\n";
@@ -185,7 +185,8 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
 
             case 2: // lw
                 int addr = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
-                if(addr < 0 ||  addr >= NUMMEMORY){//check Error: 'lw' address out of bounds 
+                //check Error: 'lw' address out of bounds 
+                if(addr < 0 ||  addr >= NUMMEMORY) {
                     cout << "Error: 'lw' address out of bounds: [ "<< addr << "\n";
                     break;
                 }
