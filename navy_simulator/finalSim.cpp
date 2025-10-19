@@ -27,6 +27,7 @@ void printState(stateType *);
 void fprintState(ofstream &out, stateType *statePtr);
 int signExtend16(int num);
 void loadProgram(const string &filename, stateType &state, ofstream &outFile);
+Instruction decodeInstruction(int machineCode);
 void initializeMachine(stateType &state);
 void executeProgram(stateType &cpu, ofstream &outFile);
 
@@ -68,6 +69,7 @@ void printState(stateType *statePtr) {
     cout << "end state\n";
 }
 
+//print the state to an output file (for easier debugging )
 void fprintState(ofstream &out, stateType *statePtr) {
     out << "\n@@@\nstate:\n";
     out << "\tpc " << statePtr->pc << "\n";
@@ -108,6 +110,7 @@ Instruction decodeInstruction(int machineCode) {
 }
 
 
+//read in the input file (machine-code file) into memory and also print it out to terminal and output file
 void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     ifstream file(filename);
     if (!file.is_open()) {
