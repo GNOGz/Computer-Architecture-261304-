@@ -174,7 +174,7 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 cpu.reg[inst.destOrOffset] = cpu.reg[inst.regA] + cpu.reg[inst.regB];
                 break;
 
-            case 1: // nor
+            case 1: // nand
                 cpu.reg[inst.destOrOffset] = ~(cpu.reg[inst.regA] & cpu.reg[inst.regB]);
                 break;
 
@@ -194,9 +194,10 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 break;
 
             case 5: { // jalr
-                int nextPC = cpu.pc + 1;
-                cpu.pc = cpu.reg[inst.regA] - 1;
-                cpu.reg[inst.regB] = nextPC;
+                int nextPC = cpu.pc + 1;       // store PC+1 (next instruction) before modifying PC
+                cpu.reg[inst.regB] = nextPC;   // save nextPC into regB, even if regA == regB
+                cpu.pc = cpu.reg[inst.regA];   // jump to the address stored in regA
+                cpu.pc--;                       // subtract 1 because PC will be incremented after the switch-case
                 break;
             }
 
