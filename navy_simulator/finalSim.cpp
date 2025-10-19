@@ -180,7 +180,7 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
 
             case 2: // lw
                 int addr = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
-                if(addr < 0 ||  addr >= NUMMEMORY){
+                if(addr < 0 ||  addr >= NUMMEMORY){//check Error: 'lw' address out of bounds 
                     cout << "Error: 'lw' address out of bounds: [ "<< addr << "\n";
                     break;
                 }
