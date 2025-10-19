@@ -32,14 +32,17 @@ void initializeMachine(stateType &state);
 void executeProgram(stateType &cpu, ofstream &outFile);
 
 int main(int argc, char *argv[]) {
+    //check command line arguments
     if (argc < 2 || argc > 3) {
         cerr << "Usage: " << argv[0] << " <machine-code file> [output file]\n";
         return 1;
     }
 
+    //set input and output files
     string inputFile = argv[1];
     string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
 
+    //open output file
     ofstream out(outputFile);
     if (!out.is_open()) {
         cerr << "Error: cannot open output file " << outputFile << endl;
@@ -69,7 +72,7 @@ void printState(stateType *statePtr) {
     cout << "end state\n";
 }
 
-//print the state to an output file (for easier debugging )
+//print state to an output file (for easier debugging )
 void fprintState(ofstream &out, stateType *statePtr) {
     out << "\n@@@\nstate:\n";
     out << "\tpc " << statePtr->pc << "\n";
@@ -85,6 +88,7 @@ void fprintState(ofstream &out, stateType *statePtr) {
     out << "end state\n";
 }
 
+//sign-extend a 16-bit number to a 32-bit integer
 int signExtend16(int num) {
     if (num & (1 << 15)) {
         num -= (1 << 16);
@@ -92,6 +96,7 @@ int signExtend16(int num) {
     return num;
 }
 
+//decode a machine code instruction into its components
 Instruction decodeInstruction(int machineCode) {
     Instruction inst{};
     inst.opcode = (machineCode >> 22) & 0x7;
@@ -103,7 +108,7 @@ Instruction decodeInstruction(int machineCode) {
         // R-type: add (0), nor (1) -> dest is low 3 bits
         inst.destOrOffset = machineCode & 0x7; // 3-bit dest (0..7)
     } else {
-        // I-type or other: lower 16 bits are offset (signed)
+        // I-type: lower 16 bits are offset (signed)
         inst.destOrOffset = signExtend16(machineCode & 0xFFFF);
     }
     return inst;
@@ -129,6 +134,7 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
             exit(1);
         }
 
+        //convert line to integer and store in memory
         stringstream ss(line);
         int value;
         if (!(ss >> value)) {
@@ -146,10 +152,8 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     }
 }
 
-
+//initialize PC, registers, and memory to 0
 void initializeMachine(stateType &state) {
-    // state.pc = 0;
-    // for (int &r : state.reg) r = 0;
     state.pc = 0;
     for (int i = 0; i < NUMREGS; ++i)
         state.reg[i] = 0;
@@ -159,7 +163,7 @@ void initializeMachine(stateType &state) {
         state.mem[i] = 0;
 }
 
-
+//execute the program until halt instruction is encountered
 void executeProgram(stateType &cpu, ofstream &outFile) {
     int instructionCount = 0;
 
@@ -167,6 +171,7 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
         printState(&cpu);
         fprintState(outFile, &cpu);
 
+        //fetch instruction
         Instruction inst = decodeInstruction(cpu.mem[cpu.pc]);
 
         switch (inst.opcode) {
