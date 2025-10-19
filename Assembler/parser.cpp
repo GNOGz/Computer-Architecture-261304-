@@ -3,6 +3,7 @@
 
 using namespace std;
 
+const int MAX_LINE_LENGTH = 1000;
 // map to store opcode,address of label and operationType
 map<string, string> operationType;
 map<string, string> opcode;
@@ -151,10 +152,15 @@ vector<string> readAllLines(string path)
 
     vector<string> lines;
     string line;
-
+    int i = 1;
     while (getline(file, line))
     {                          // read line by line
+        if(line.size() > MAX_LINE_LENGTH){
+            cerr << "Line "+to_string(i)+ " length exceed 1000 characters.";
+            exit(1);
+        }
         lines.push_back(line); // store each line in the vector
+        i++;
     }
 
     file.close();
@@ -189,7 +195,7 @@ string tokenize()
     // cout << "tokenizing: " << stream << endl;
     string tokenToReturn = "";
     int i = 0;
-    while (i < stream.size())
+    if (i < stream.size())
     {
         while (stream[i] == ' ' || stream[i] == '\0' || stream[i] == '\t')
         {
@@ -208,7 +214,10 @@ string tokenize()
             stream = "";
         return tokenToReturn;
     }
-    return "";
+    else{
+        cerr << "incomplete field" ;
+        exit(1);
+    }
 }
 
 int convertToNumber(string s)
