@@ -27,8 +27,24 @@ void printState(stateType *);
 void fprintState(ofstream &out, stateType *statePtr);
 int signExtend16(int num);
 void loadProgram(const string &filename, stateType &state, ofstream &outFile);
+Instruction decodeInstruction(int machineCode);
 void initializeMachine(stateType &state);
 void executeProgram(stateType &cpu, ofstream &outFile);
+
+// --- helper for safe memory/register access ---
+inline void checkMemAccess(int addr) {
+    if (addr < 0 || addr >= NUMMEMORY) {
+        cerr << "Memory access out of bounds: address " << addr << endl;
+        exit(1);
+    }
+}
+
+inline void checkRegAccess(int reg) {
+    if (reg < 0 || reg >= NUMREGS) {
+        cerr << "Register access out of bounds: register " << reg << endl;
+        exit(1);
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc < 2 || argc > 3) {
@@ -37,7 +53,7 @@ int main(int argc, char *argv[]) {
     }
 
     string inputFile = argv[1];
-    string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
+    string outputFile = (argc == 3) ? argv[2] : "output.txt";
 
     ofstream out(outputFile);
     if (!out.is_open()) {
@@ -60,7 +76,6 @@ void printState(stateType *statePtr) {
     for (int i = 0; i < statePtr->numMemory; i++) {
         cout << "\t\tmem[ " << i << " ] " << statePtr->mem[i] << "\n";
     }
-
     cout << "\tregisters:\n";
     for (int i = 0; i < NUMREGS; i++) {
         cout << "\t\treg[ " << i << " ] " << statePtr->reg[i] << "\n";
@@ -75,7 +90,6 @@ void fprintState(ofstream &out, stateType *statePtr) {
     for (int i = 0; i < statePtr->numMemory; i++) {
         out << "\t\tmem[ " << i << " ] " << statePtr->mem[i] << "\n";
     }
-
     out << "\tregisters:\n";
     for (int i = 0; i < NUMREGS; i++) {
         out << "\t\treg[ " << i << " ] " << statePtr->reg[i] << "\n";
@@ -84,29 +98,18 @@ void fprintState(ofstream &out, stateType *statePtr) {
 }
 
 int signExtend16(int num) {
-    if (num & (1 << 15)) {
-        num -= (1 << 16);
-    }
+    if (num & (1 << 15)) num -= (1 << 16);
     return num;
 }
 
 Instruction decodeInstruction(int machineCode) {
     Instruction inst{};
     inst.opcode = (machineCode >> 22) & 0x7;
-    inst.regA   = (machineCode >> 19) & 0x7;
-    inst.regB   = (machineCode >> 16) & 0x7;
-
-    if (inst.opcode == 0 || inst.opcode == 1) {
-        inst.destOrOffset = machineCode & 0x7;
-        // R-type: add (0), nor (1) -> dest is low 3 bits
-        inst.destOrOffset = machineCode & 0x7; // 3-bit dest (0..7)
-    } else {
-        // I-type or other: lower 16 bits are offset (signed)
-        inst.destOrOffset = signExtend16(machineCode & 0xFFFF);
-    }
+    inst.regA = (machineCode >> 19) & 0x7;
+    inst.regB = (machineCode >> 16) & 0x7;
+    inst.destOrOffset = signExtend16(machineCode & 0xFFFF);
     return inst;
 }
-
 
 void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     ifstream file(filename);
@@ -119,9 +122,8 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     int index = 0;
 
     while (getline(file, line)) {
-        //check line length
         if (line.length() > MAXLINELENGTH) {
-            cerr << "Error: line " << index 
+            cerr << "Error: line " << index
                  << " exceeds MAXLINELENGTH of " << MAXLINELENGTH << endl;
             exit(1);
         }
@@ -132,68 +134,96 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
             cerr << "Error reading line " << index << endl;
             exit(1);
         }
+
+        checkMemAccess(index);
         state.mem[index++] = value;
     }
 
     state.numMemory = index;
-
     for (int i = 0; i < state.numMemory; i++) {
         cout << "memory[" << i << "]=" << state.mem[i] << endl;
         outFile << "memory[" << i << "]=" << state.mem[i] << endl;
     }
 }
 
-
 void initializeMachine(stateType &state) {
-    // state.pc = 0;
-    // for (int &r : state.reg) r = 0;
     state.pc = 0;
     for (int i = 0; i < NUMREGS; ++i)
         state.reg[i] = 0;
-
     state.numMemory = 0;
     for (int i = 0; i < NUMMEMORY; ++i)
         state.mem[i] = 0;
 }
-
-
 void executeProgram(stateType &cpu, ofstream &outFile) {
     int instructionCount = 0;
 
     while (true) {
+        checkMemAccess(cpu.pc);
+
         printState(&cpu);
         fprintState(outFile, &cpu);
 
         Instruction inst = decodeInstruction(cpu.mem[cpu.pc]);
 
+        // always validate regA and regB
+        checkRegAccess(inst.regA);
+        checkRegAccess(inst.regB);
+
         switch (inst.opcode) {
             case 0: // add
-                cpu.reg[inst.destOrOffset] = cpu.reg[inst.regA] + cpu.reg[inst.regB];
+                checkRegAccess(inst.destOrOffset);
+                cpu.reg[inst.destOrOffset] =
+                    cpu.reg[inst.regA] + cpu.reg[inst.regB];
                 break;
 
             case 1: // nor
-                cpu.reg[inst.destOrOffset] = ~(cpu.reg[inst.regA] & cpu.reg[inst.regB]);
+                checkRegAccess(inst.destOrOffset);
+                cpu.reg[inst.destOrOffset] =
+                    ~(cpu.reg[inst.regA] | cpu.reg[inst.regB]);
                 break;
 
-            case 2: // lw
-                cpu.reg[inst.regB] = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
+            case 2: { // lw
+                int addr = cpu.reg[inst.regA] + inst.destOrOffset;
+                checkMemAccess(addr);
+                checkRegAccess(inst.regB);
+                cpu.reg[inst.regB] = cpu.mem[addr];
                 break;
+            }
 
-            case 3: // sw
-                cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset] = cpu.reg[inst.regB];
+            case 3: { // sw
+                int addr = cpu.reg[inst.regA] + inst.destOrOffset;
+                checkMemAccess(addr);
+                checkRegAccess(inst.regB);
+                cpu.mem[addr] = cpu.reg[inst.regB];
                 break;
+            }
 
-            case 4: // beq
+            case 4: { // beq
                 if (cpu.reg[inst.regA] == cpu.reg[inst.regB]) {
-                    cpu.pc += inst.destOrOffset;
+                    int newPc = cpu.pc + 1 + inst.destOrOffset;
+                    if (newPc < 0 || newPc >= NUMMEMORY) {
+                        cerr << "Memory access out of bounds (branch target): " << newPc << endl;
+                        exit(1);
+                    }
+                    cpu.pc = newPc;
+                    instructionCount++;
+                    continue; // skip pc increment
                 }
                 break;
+            }
 
             case 5: { // jalr
                 int nextPC = cpu.pc + 1;
-                cpu.pc = cpu.reg[inst.regA] - 1;
+                int newPc = cpu.reg[inst.regA];
+                checkRegAccess(inst.regB);
+                if (newPc < 0 || newPc >= NUMMEMORY) {
+                    cerr << "Memory access out of bounds (jalr target): " << newPc << endl;
+                    exit(1);
+                }
                 cpu.reg[inst.regB] = nextPC;
-                break;
+                cpu.pc = newPc;
+                instructionCount++;
+                continue;
             }
 
             case 6: // halt
@@ -201,11 +231,8 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                      << " instructions executed.\nFinal state of machine:\n";
                 outFile << "Machine halted.\nTotal of " << (instructionCount + 1)
                         << " instructions executed.\nFinal state of machine:\n";
-
-                cpu.pc++;
                 printState(&cpu);
                 fprintState(outFile, &cpu);
-
                 return;
 
             case 7: // noop
@@ -218,5 +245,10 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
 
         cpu.pc++;
         instructionCount++;
+
+        if (cpu.pc < 0 || cpu.pc >= NUMMEMORY) {
+            cerr << "Memory access out of bounds (next PC): " << cpu.pc << endl;
+            exit(1);
+        }
     }
 }
