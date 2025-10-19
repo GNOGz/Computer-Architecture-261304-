@@ -99,9 +99,9 @@ int signExtend16(int num) {
 //decode a machine code instruction into its components
 Instruction decodeInstruction(int machineCode) {
     Instruction inst{};
-    inst.opcode = (machineCode >> 22) & 0x7;
-    inst.regA   = (machineCode >> 19) & 0x7;
-    inst.regB   = (machineCode >> 16) & 0x7;
+    inst.opcode = (machineCode >> 22) & 0x7; // 3-bit opcode (bits 22-24)
+    inst.regA   = (machineCode >> 19) & 0x7; // 3-bit regA (bits 19-21)
+    inst.regB   = (machineCode >> 16) & 0x7; // 3-bit regB (bits 16-18)
 
     if (inst.opcode == 0 || inst.opcode == 1) {
         inst.destOrOffset = machineCode & 0x7;
