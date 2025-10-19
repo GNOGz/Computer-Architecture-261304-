@@ -179,6 +179,7 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 break;
 
             case 2: // lw
+                
                 cpu.reg[inst.regB] = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
                 break;
 
