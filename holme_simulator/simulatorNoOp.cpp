@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
         bool allws = true;
         for (char c : line) if (!isspace((unsigned char)c)) { allws = false; break; }
         if (allws) continue;
-
         long long val;
         try {
             // allow negative numbers as well

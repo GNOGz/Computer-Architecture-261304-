@@ -5,17 +5,57 @@
 
 using namespace std;
 
-#define NUMMEMORY 65536
-#define NUMREGS 8
+#define NUMMEMORY 65536 /* maximum number of words in memory */
+#define NUMREGS 8       /* number of machine registers */
+#define MAXLINELENGTH 1000
 
-struct stateStruct {
+typedef struct stateStruct {
     int pc;
     int mem[NUMMEMORY];
     int reg[NUMREGS];
     int numMemory;
+} stateType;
+
+struct Instruction {
+    int opcode;
+    int regA;
+    int regB;
+    int destOrOffset;
 };
 
-typedef stateStruct stateType;
+void printState(stateType *);
+void fprintState(ofstream &out, stateType *statePtr);
+int signExtend16(int num);
+void loadProgram(const string &filename, stateType &state, ofstream &outFile);
+Instruction decodeInstruction(int machineCode);
+void initializeMachine(stateType &state);
+void executeProgram(stateType &cpu, ofstream &outFile);
+
+int main(int argc, char *argv[]) {
+    //check command line arguments
+    if (argc < 2 || argc > 3) {
+        cerr << "Usage: " << argv[0] << " <machine-code file> [output file]\n";
+        return 1;
+    }
+
+    //set input and output files
+    string inputFile = argv[1];
+    string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
+
+    //open output file
+    ofstream out(outputFile);
+    if (!out.is_open()) {
+        cerr << "Error: cannot open output file " << outputFile << endl;
+        return 1;
+    }
+
+    stateType machine{};
+    initializeMachine(machine);
+    loadProgram(inputFile, machine, out);
+    executeProgram(machine, out);
+    out.close();
+    return 0;
+}
 
 void printState(stateType *statePtr) {
     cout << "\n@@@\nstate:\n";
@@ -32,6 +72,7 @@ void printState(stateType *statePtr) {
     cout << "end state\n";
 }
 
+//same as printState() but print to an output file (for easier debugging )
 void fprintState(ofstream &out, stateType *statePtr) {
     out << "\n@@@\nstate:\n";
     out << "\tpc " << statePtr->pc << "\n";
@@ -47,6 +88,7 @@ void fprintState(ofstream &out, stateType *statePtr) {
     out << "end state\n";
 }
 
+//sign-extend a 16-bit number to a 32-bit integer
 int signExtend16(int num) {
     if (num & (1 << 15)) {
         num -= (1 << 16);
@@ -54,22 +96,26 @@ int signExtend16(int num) {
     return num;
 }
 
-struct Instruction {
-    int opcode;
-    int regA;
-    int regB;
-    int destOrOffset;
-};
-
+//decode a machine code instruction into its components
 Instruction decodeInstruction(int machineCode) {
     Instruction inst{};
-    inst.opcode = (machineCode >> 22) & 0x7;
-    inst.regA = (machineCode >> 19) & 0x7;
-    inst.regB = (machineCode >> 16) & 0x7;
-    inst.destOrOffset = signExtend16(machineCode & 0xFFFF);
+    inst.opcode = (machineCode >> 22) & 0x7; // 3-bit opcode (bits 22-24)
+    inst.regA   = (machineCode >> 19) & 0x7; // 3-bit regA (bits 19-21)
+    inst.regB   = (machineCode >> 16) & 0x7; // 3-bit regB (bits 16-18)
+
+    if (inst.opcode == 0 || inst.opcode == 1) {
+        inst.destOrOffset = machineCode & 0x7;
+        // R-type: add (0), nor (1) -> dest is low 3 bits
+        inst.destOrOffset = machineCode & 0x7; // 3-bit dest (0..7)
+    } else {
+        // I-type: lower 16 bits are offset (signed)
+        inst.destOrOffset = signExtend16(machineCode & 0xFFFF);
+    }
     return inst;
 }
 
+
+//read in the input file (machine-code file) into memory and also print it out to terminal and output file
 void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     ifstream file(filename);
     if (!file.is_open()) {
@@ -79,7 +125,16 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
 
     string line;
     int index = 0;
+
     while (getline(file, line)) {
+        //check line length
+        if (line.length() > MAXLINELENGTH) {
+            cerr << "Error: line " << index 
+                 << " exceeds MAXLINELENGTH of " << MAXLINELENGTH << endl;
+            exit(1);
+        }
+
+        //convert line to integer and store in memory
         stringstream ss(line);
         int value;
         if (!(ss >> value)) {
@@ -97,13 +152,18 @@ void loadProgram(const string &filename, stateType &state, ofstream &outFile) {
     }
 }
 
-
+//initialize PC, registers, and memory to 0
 void initializeMachine(stateType &state) {
     state.pc = 0;
-    for (int &r : state.reg) r = 0;
+    for (int i = 0; i < NUMREGS; ++i)
+        state.reg[i] = 0;
+
+    state.numMemory = 0;
+    for (int i = 0; i < NUMMEMORY; ++i)
+        state.mem[i] = 0;
 }
 
-
+//execute the program until halt instruction is encountered
 void executeProgram(stateType &cpu, ofstream &outFile) {
     int instructionCount = 0;
 
@@ -111,6 +171,7 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
         printState(&cpu);
         fprintState(outFile, &cpu);
 
+        //fetch instruction
         Instruction inst = decodeInstruction(cpu.mem[cpu.pc]);
 
         switch (inst.opcode) {
@@ -118,11 +179,17 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 cpu.reg[inst.destOrOffset] = cpu.reg[inst.regA] + cpu.reg[inst.regB];
                 break;
 
-            case 1: // nor
+            case 1: // nand
                 cpu.reg[inst.destOrOffset] = ~(cpu.reg[inst.regA] & cpu.reg[inst.regB]);
                 break;
 
             case 2: // lw
+                int addr = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
+                //check Error: 'lw' address out of bounds 
+                if(addr < 0 ||  addr >= NUMMEMORY) {
+                    cout << "Error: 'lw' address out of bounds: [ "<< addr << "\n";
+                    break;
+                }
                 cpu.reg[inst.regB] = cpu.mem[cpu.reg[inst.regA] + inst.destOrOffset];
                 break;
 
@@ -137,9 +204,10 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 break;
 
             case 5: { // jalr
-                int nextPC = cpu.pc + 1;
-                cpu.pc = cpu.reg[inst.regA] - 1;
-                cpu.reg[inst.regB] = nextPC;
+                int nextPC = cpu.pc + 1;       // store PC+1 (next instruction) before modifying PC
+                cpu.reg[inst.regB] = nextPC;   // save nextPC into regB, even if regA == regB
+                cpu.pc = cpu.reg[inst.regA];   // jump to the address stored in regA
+                cpu.pc--;                       // subtract 1 because PC will be incremented after the switch-case
                 break;
             }
 
@@ -153,8 +221,6 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
                 printState(&cpu);
                 fprintState(outFile, &cpu);
 
-                cout << "\nRegister 1 holds: " << cpu.reg[1] << "\n";
-                outFile << "\nRegister 1 holds: " << cpu.reg[1] << "\n";
                 return;
 
             case 7: // noop
@@ -168,28 +234,4 @@ void executeProgram(stateType &cpu, ofstream &outFile) {
         cpu.pc++;
         instructionCount++;
     }
-}
-
-int main(int argc, char *argv[]) {
-    if (argc < 2 || argc > 3) {
-        cerr << "Usage: " << argv[0] << " <machine-code file> [output file]\n";
-        return 1;
-    }
-
-    string inputFile = argv[1];
-    string outputFile = (argc == 3) ? argv[2] : "output.txt"; // default file
-
-    ofstream out(outputFile);
-    if (!out.is_open()) {
-        cerr << "Error: cannot open output file " << outputFile << endl;
-        return 1;
-    }
-
-    stateType machine{};
-    initializeMachine(machine);
-    loadProgram(inputFile, machine, out);
-    executeProgram(machine, out);
-
-    out.close();
-    return 0;
 }
